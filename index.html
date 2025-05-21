@@ -6,7 +6,7 @@
   <style>
     body {
       margin: 0;
-      background-color: black; /* Or transparent for embeds */
+      background-color: transparent; /* Or transparent for embeds */
       color: white;
       font-size: 16px;
       text-align: center;
@@ -17,46 +17,60 @@
       height: 100vh;
       flex-direction: column;
       gap: 8px;
+      padding: 0 10px;
     }
   </style>
 </head>
 <body>
-  <div id="ipv4">IPv4: Loading...</div>
+  <div id="ipv4" style="display:none;">IPv4: Loading...</div>
   <div id="ipv6" style="display:none;">IPv6: Loading...</div>
-  <div id="isp">ISP: Loading...</div>
-  <div id="city">City: Loading...</div>
+  <div id="isp" style="display:none;">ISP: Loading...</div>
+  <div id="city" style="display:none;">City: Loading...</div>
+  <div id="error" style="display:none; color: red; font-weight: bold;"></div>
 
   <script>
     fetch('https://ipapi.co/json/')
       .then(response => response.json())
       .then(data => {
-        // IPv4 is always present
-        document.getElementById('ipv4').innerText = 'IPv4: ' + (data.ip || 'N/A');
-
-        // Show IPv6 only if present and not empty
-        if (data.ipv6 && data.ipv6.trim() !== '') {
+        const hasIPv4 = data.ip && data.ip.trim() !== '';
+        const hasIPv6 = data.ipv6 && data.ipv6.trim() !== '';
+        
+        if (!hasIPv4 && !hasIPv6) {
+          // Neither IP available
+          document.getElementById('error').style.display = 'block';
+          document.getElementById('error').innerText = 'You do not have an available IP address';
+          return;
+        }
+        
+        // Show IPv4 if available
+        if (hasIPv4) {
+          const ipv4Div = document.getElementById('ipv4');
+          ipv4Div.style.display = 'block';
+          ipv4Div.innerText = 'IPv4: ' + data.ip;
+        }
+        
+        // Show IPv6 if available
+        if (hasIPv6) {
           const ipv6Div = document.getElementById('ipv6');
           ipv6Div.style.display = 'block';
           ipv6Div.innerText = 'IPv6: ' + data.ipv6;
         }
-
-        // ISP
-        document.getElementById('isp').innerText = 'ISP: ' + (data.org || 'N/A');
-
-        // City, Region (State), Country
+        
+        // Show ISP if available
+        if (data.org && data.org.trim() !== '') {
+          const ispDiv = document.getElementById('isp');
+          ispDiv.style.display = 'block';
+          ispDiv.innerText = 'ISP: ' + data.org;
+        }
+        
+        // Show city, region, country if available
         const city = data.city || '';
-        const region = data.region_code || ''; // State code (e.g. IL)
+        const region = data.region_code || '';
         const country = data.country_name || '';
-        let cityLine = 'City: ';
-        if(city) cityLine += city;
-        if(region) cityLine += ', ' + region;
-        if(country) cityLine += ', ' + country;
-        document.getElementById('city').innerText = cityLine;
-      })
-      .catch(err => {
-        document.getElementById('ipv4').innerText = 'Error loading info';
-        console.error(err);
-      });
-  </script>
-</body>
-</html>
+        if(city || region || country) {
+          const cityDiv = document.getElementById('city');
+          cityDiv.style.display = 'block';
+          let cityLine = 'City: ';
+          if(city) cityLine += city;
+          if(region) cityLine += ', ' + region;
+          if(country) cityLine += ', ' + coun
