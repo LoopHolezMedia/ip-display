@@ -6,7 +6,7 @@
   <style>
     body {
       margin: 0;
-      background-color: transparent;
+      background-color: black; /* Or transparent for embedding */
       color: white;
       font-size: 16px;
       text-align: center;
@@ -29,48 +29,57 @@
   <div id="error" style="display:none; color: red; font-weight: bold;"></div>
 
   <script>
-    fetch('https://ipapi.co/json/')
+    // Replace 'YOUR_TOKEN_HERE' with your actual ipinfo.io token
+    fetch('https://ipinfo.io/json?token=5b5227270a94be')
       .then(response => response.json())
       .then(data => {
         const hasIPv4 = data.ip && data.ip.trim() !== '';
-        const hasIPv6 = data.ipv6 && data.ipv6.trim() !== '';
-        
-        if (!hasIPv4 && !hasIPv6) {
-          // Neither IP available
+        // ipinfo.io returns IPv6 in 'ip' field only if it's IPv6, otherwise only IPv4
+        // So no separate IPv6 field. To detect IPv6, we check if ip contains ':'
+        const isIPv6 = hasIPv4 && data.ip.includes(':');
+        const isIPv4 = hasIPv4 && !isIPv6;
+
+        if (!hasIPv4) {
           document.getElementById('error').style.display = 'block';
           document.getElementById('error').innerText = 'You do not have an available IP address';
           return;
         }
-        
-        // Show IPv4 if available
-        if (hasIPv4) {
+
+        if (isIPv4) {
           const ipv4Div = document.getElementById('ipv4');
           ipv4Div.style.display = 'block';
           ipv4Div.innerText = 'IPv4: ' + data.ip;
-        }
-        
-        // Show IPv6 if available
-        if (hasIPv6) {
+        } else {
+          // IPv6 only
           const ipv6Div = document.getElementById('ipv6');
           ipv6Div.style.display = 'block';
-          ipv6Div.innerText = 'IPv6: ' + data.ipv6;
+          ipv6Div.innerText = 'IPv6: ' + data.ip;
         }
-        
-        // Show ISP if available
+
         if (data.org && data.org.trim() !== '') {
           const ispDiv = document.getElementById('isp');
           ispDiv.style.display = 'block';
           ispDiv.innerText = 'ISP: ' + data.org;
         }
-        
-        // Show city, region, country if available
+
         const city = data.city || '';
-        const region = data.region_code || '';
-        const country = data.country_name || '';
+        const region = data.region || '';
+        const country = data.country || '';
         if(city || region || country) {
           const cityDiv = document.getElementById('city');
           cityDiv.style.display = 'block';
           let cityLine = 'City: ';
           if(city) cityLine += city;
           if(region) cityLine += ', ' + region;
-          if(country) cityLine += ', ' + coun
+          if(country) cityLine += ', ' + country;
+          cityDiv.innerText = cityLine;
+        }
+      })
+      .catch(err => {
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').innerText = 'Error loading info';
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
