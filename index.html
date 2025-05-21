@@ -6,7 +6,7 @@
   <style>
     body {
       margin: 0;
-      background-color: black; /* Or transparent for embedding */
+      background-color: transparent;
       color: white;
       font-size: 16px;
       text-align: center;
@@ -29,13 +29,10 @@
   <div id="error" style="display:none; color: red; font-weight: bold;"></div>
 
   <script>
-    // Replace 'YOUR_TOKEN_HERE' with your actual ipinfo.io token
     fetch('https://ipinfo.io/json?token=5b5227270a94be')
       .then(response => response.json())
       .then(data => {
         const hasIPv4 = data.ip && data.ip.trim() !== '';
-        // ipinfo.io returns IPv6 in 'ip' field only if it's IPv6, otherwise only IPv4
-        // So no separate IPv6 field. To detect IPv6, we check if ip contains ':'
         const isIPv6 = hasIPv4 && data.ip.includes(':');
         const isIPv4 = hasIPv4 && !isIPv6;
 
