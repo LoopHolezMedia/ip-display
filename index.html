@@ -1,109 +1,82 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>IP Info</title>
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        background-color: #080f13;
-        color: white;
-        font-size: 16px;
-        text-align: center;
-        font-family: sans-serif;
-      }
-      .line {
-        margin: 8px 0;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="output">
-      Loading...
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <title>User Info</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #080f13;
+      color: white;
+      font-size: 16px;
+      text-align: center;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ipv4" style="display:none;">IPv4: Loading...</div>
+  <div id="ipv6" style="display:none;">IPv6: Loading...</div>
+  <div id="isp" style="display:none;">ISP: Loading...</div>
+  <div id="city" style="display:none;">City: Loading...</div>
+  <div id="error" style="display:none; color: red; font-weight: bold;"></div>
 
-    <script>
-      // 🔧 Toggle between 'real', 'mock-ipv6', or 'mock-none'
-      const mode = 'mock-ipv6'; // ← change this to 'real' or 'mock-none' to test other modes
+  <script>
+    fetch('https://ipinfo.io/json?token=5b5227270a94be')
+      .then(response => response.json())
+      .then(data => {
+        const hasIPv4 = data.ip && data.ip.trim() !== '';
+        const isIPv6 = hasIPv4 && data.ip.includes(':');
+        const isIPv4 = hasIPv4 && !isIPv6;
 
-      const output = document.getElementById('output');
-
-      function display(data) {
-        output.innerHTML = ''; // Clear output
-
-        let hasIP = false;
-
-        if (data.ipv4) {
-          hasIP = true;
-          output.innerHTML += `<div class="line">IPv4: ${data.ipv4}</div>`;
+        if (!hasIPv4) {
+          document.getElementById('error').style.display = 'block';
+          document.getElementById('error').innerText = 'You do not have an available IP address';
+          return;
         }
 
-        if (data.ipv6) {
-          hasIP = true;
-          output.innerHTML += `<div class="line">IPv6: ${data.ipv6}</div>`;
+        if (isIPv4) {
+          const ipv4Div = document.getElementById('ipv4');
+          ipv4Div.style.display = 'block';
+          ipv4Div.innerText = 'IPv4: ' + data.ip;
+        } else {
+          // IPv6 only
+          const ipv6Div = document.getElementById('ipv6');
+          ipv6Div.style.display = 'block';
+          ipv6Div.innerText = 'IPv6: ' + data.ip;
         }
 
-        if (data.org) {
-          output.innerHTML += `<div class="line">ISP: ${data.org}</div>`;
+        if (data.org && data.org.trim() !== '') {
+          const ispDiv = document.getElementById('isp');
+          ispDiv.style.display = 'block';
+          ispDiv.innerText = 'ISP: ' + data.org;
         }
 
-        if (data.city || data.region || data.country) {
-          const locationParts = [data.city, data.region, data.country].filter(Boolean);
-          output.innerHTML += `<div class="line">City: ${locationParts.join(', ')}</div>`;
+        const city = data.city || '';
+        const region = data.region || '';
+        const country = data.country || '';
+        if(city || region || country) {
+          const cityDiv = document.getElementById('city');
+          cityDiv.style.display = 'block';
+          let cityLine = 'City: ';
+          if(city) cityLine += city;
+          if(region) cityLine += ', ' + region;
+          if(country) cityLine += ', ' + country;
+          cityDiv.innerText = cityLine;
         }
-
-        if (!hasIP) {
-          output.innerHTML = 'You do not have an available IP address';
-        }
-      }
-
-      function simulate(mode) {
-        if (mode === 'real') {
-          fetch('https://ipinfo.io/json?token=YOUR_TOKEN_HERE')
-            .then(res => res.json())
-            .then(data => {
-              const ip = data.ip || '';
-              const isIPv6 = ip.includes(':');
-
-              display({
-                ipv4: isIPv6 ? null : ip,
-                ipv6: isIPv6 ? ip : null,
-                org: data.org,
-                city: data.city,
-                region: data.region,
-                country: data.country
-              });
-            })
-            .catch(err => {
-              output.innerText = 'Error loading IP info';
-            });
-        }
-
-        if (mode === 'mock-ipv6') {
-          display({
-            ipv4: null,
-            ipv6: '2001:0db8:85a3::8a2e:0370:7334',
-            org: 'Mock ISP v6',
-            city: 'V6 City',
-            region: 'V6',
-            country: 'IPv6land'
-          });
-        }
-
-        if (mode === 'mock-none') {
-          display({
-            ipv4: null,
-            ipv6: null,
-            org: null,
-            city: null,
-            region: null,
-            country: null
-          });
-        }
-      }
-
-      simulate(mode);
-    </script>
-  </body>
+      })
+      .catch(err => {
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').innerText = 'Error loading info';
+        console.error(err);
+      });
+  </script>
+</body>
 </html>
