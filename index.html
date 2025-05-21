@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Your IP</title>
     <style>
       body {
@@ -11,17 +11,26 @@
         font-size: 16px;
         text-align: center;
         font-family: sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
       }
     </style>
+  </head>
+  <body>
+    <div id="ip">Loading IP...</div>
+
     <script>
       fetch('https://api.ipify.org?format=json')
         .then(response => response.json())
         .then(data => {
-          document.body.innerText = 'Your IP: ' + data.ip;
+          document.getElementById('ip').innerText = 'Your IP: ' + data.ip;
+        })
+        .catch(err => {
+          document.getElementById('ip').innerText = '⚠️ Could not load IP';
+          console.error('Fetch error:', err);
         });
     </script>
-  </head>
-  <body>
-    Loading IP...
   </body>
 </html>
