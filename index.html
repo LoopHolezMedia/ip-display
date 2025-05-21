@@ -1,36 +1,62 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Your IP</title>
-    <style>
-      body {
-        margin: 0;
-        background-color: transparent;
-        color: white;
-        font-size: 16px;
-        text-align: center;
-        font-family: sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="ip">Loading IP...</div>
+<head>
+  <meta charset="UTF-8" />
+  <title>User Info</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black; /* Or transparent for embeds */
+      color: white;
+      font-size: 16px;
+      text-align: center;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ipv4">IPv4: Loading...</div>
+  <div id="ipv6" style="display:none;">IPv6: Loading...</div>
+  <div id="isp">ISP: Loading...</div>
+  <div id="city">City: Loading...</div>
 
-    <script>
-      fetch('https://api.ipify.org?format=json')
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById('ip').innerText = data.ip;
-        })
-        .catch(err => {
-          document.getElementById('ip').innerText = '⚠️ Could not load IP';
-          console.error('Fetch error:', err);
-        });
-    </script>
-  </body>
+  <script>
+    fetch('https://ipapi.co/json/')
+      .then(response => response.json())
+      .then(data => {
+        // IPv4 is always present
+        document.getElementById('ipv4').innerText = 'IPv4: ' + (data.ip || 'N/A');
+
+        // Show IPv6 only if present and not empty
+        if (data.ipv6 && data.ipv6.trim() !== '') {
+          const ipv6Div = document.getElementById('ipv6');
+          ipv6Div.style.display = 'block';
+          ipv6Div.innerText = 'IPv6: ' + data.ipv6;
+        }
+
+        // ISP
+        document.getElementById('isp').innerText = 'ISP: ' + (data.org || 'N/A');
+
+        // City, Region (State), Country
+        const city = data.city || '';
+        const region = data.region_code || ''; // State code (e.g. IL)
+        const country = data.country_name || '';
+        let cityLine = 'City: ';
+        if(city) cityLine += city;
+        if(region) cityLine += ', ' + region;
+        if(country) cityLine += ', ' + country;
+        document.getElementById('city').innerText = cityLine;
+      })
+      .catch(err => {
+        document.getElementById('ipv4').innerText = 'Error loading info';
+        console.error(err);
+      });
+  </script>
+</body>
 </html>
