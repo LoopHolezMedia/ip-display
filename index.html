@@ -1,82 +1,333 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8" />
-  <title>User Info</title>
-  <style>
-    body {
-      margin: 0;
-      background-color: #080f13;
-      color: white;
-      font-size: 16px;
-      text-align: center;
-      font-family: sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-      gap: 8px;
-      padding: 0 10px;
-    }
-  </style>
-</head>
-<body>
-  <div id="ipv4" style="display:none;">IPv4: Loading...</div>
-  <div id="ipv6" style="display:none;">IPv6: Loading...</div>
-  <div id="isp" style="display:none;">ISP: Loading...</div>
-  <div id="city" style="display:none;">City: Loading...</div>
-  <div id="error" style="display:none; color: red; font-weight: bold;"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Your IP Info</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background-color: #080f13;
+        color: white;
+        font-family: sans-serif;
+        font-size: 16px;
+        text-align: center;
+        line-height: 1.6;
+      }
+      #vpn-warning {
+        color: red;
+        font-weight: bold;
+        margin-bottom: 16px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
+    <div id="info">
+      Loading...
+    </div>
 
-  <script>
-    fetch('https://ipinfo.io/json?token=5b5227270a94be')
-      .then(response => response.json())
-      .then(data => {
-        const hasIPv4 = data.ip && data.ip.trim() !== '';
-        const isIPv6 = hasIPv4 && data.ip.includes(':');
-        const isIPv4 = hasIPv4 && !isIPv6;
+    <script>
+      const infoDiv = document.getElementById("info");
+      const vpnWarning = document.getElementById("vpn-warning");
 
-        if (!hasIPv4) {
-          document.getElementById('error').style.display = 'block';
-          document.getElementById('error').innerText = 'You do not have an available IP address';
-          return;
-        }
+      // Get IP and location info from IPInfo Lite
+      fetch("https://api.ipinfo.io/lite?token=YOUR_IPINFO_TOKEN")
+        .then(res => res.json())
+        .then(data => {
+          const ip = data.ip || null;
+          const org = data.org || "Unknown ISP";
+          const city = data.city || "";
+          const region = data.region || "";
+          const countryCode = data.country || "";
+          const location = `${city}, ${region}, ${getCountryName(countryCode)}`;
 
-        if (isIPv4) {
-          const ipv4Div = document.getElementById('ipv4');
-          ipv4Div.style.display = 'block';
-          ipv4Div.innerText = 'IPv4: ' + data.ip;
-        } else {
-          // IPv6 only
-          const ipv6Div = document.getElementById('ipv6');
-          ipv6Div.style.display = 'block';
-          ipv6Div.innerText = 'IPv6: ' + data.ip;
-        }
+          let html = "";
 
-        if (data.org && data.org.trim() !== '') {
-          const ispDiv = document.getElementById('isp');
-          ispDiv.style.display = 'block';
-          ispDiv.innerText = 'ISP: ' + data.org;
-        }
+          if (ip && ip.includes(":")) {
+            html += `<div>IPv6: ${ip}</div>`;
+          } else if (ip) {
+            html += `<div>IPv4: ${ip}</div>`;
+          }
 
-        const city = data.city || '';
-        const region = data.region || '';
-        const country = data.country || '';
-        if(city || region || country) {
-          const cityDiv = document.getElementById('city');
-          cityDiv.style.display = 'block';
-          let cityLine = 'City: ';
-          if(city) cityLine += city;
-          if(region) cityLine += ', ' + region;
-          if(country) cityLine += ', ' + country;
-          cityDiv.innerText = cityLine;
-        }
-      })
-      .catch(err => {
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').innerText = 'Error loading info';
-        console.error(err);
-      });
-  </script>
-</body>
+          if (!ip) {
+            html += `<div style="color:red;">You do not have an available IP address.</div>`;
+          }
+
+          html += `<div>ISP: ${org}</div>`;
+          html += `<div>City: ${location}</div>`;
+
+          infoDiv.innerHTML = html;
+
+          // VPN detection using vpnapi.io
+          fetch("https://vpnapi.io/api/?ip=" + ip)
+            .then(res => res.json())
+            .then(vpnData => {
+              const s = vpnData.security || {};
+              if (s.vpn || s.proxy || s.tor) {
+                vpnWarning.style.display = "block";
+              }
+            });
+        })
+        .catch(err => {
+          infoDiv.innerHTML = `<div style="color:red;">Failed to load IP information.</div>`;
+        });
+
+      // Country code to full name
+      function getCountryName(code) {
+        const countryCodes = {
+  "AF": "Afghanistan",
+  "AX": "Åland Islands",
+  "AL": "Albania",
+  "DZ": "Algeria",
+  "AS": "American Samoa",
+  "AD": "Andorra",
+  "AO": "Angola",
+  "AI": "Anguilla",
+  "AQ": "Antarctica",
+  "AG": "Antigua and Barbuda",
+  "AR": "Argentina",
+  "AM": "Armenia",
+  "AW": "Aruba",
+  "AU": "Australia",
+  "AT": "Austria",
+  "AZ": "Azerbaijan",
+  "BS": "Bahamas",
+  "BH": "Bahrain",
+  "BD": "Bangladesh",
+  "BB": "Barbados",
+  "BY": "Belarus",
+  "BE": "Belgium",
+  "BZ": "Belize",
+  "BJ": "Benin",
+  "BM": "Bermuda",
+  "BT": "Bhutan",
+  "BO": "Bolivia",
+  "BQ": "Bonaire, Sint Eustatius and Saba",
+  "BA": "Bosnia and Herzegovina",
+  "BW": "Botswana",
+  "BV": "Bouvet Island",
+  "BR": "Brazil",
+  "IO": "British Indian Ocean Territory",
+  "BN": "Brunei Darussalam",
+  "BG": "Bulgaria",
+  "BF": "Burkina Faso",
+  "BI": "Burundi",
+  "KH": "Cambodia",
+  "CM": "Cameroon",
+  "CA": "Canada",
+  "CV": "Cape Verde",
+  "KY": "Cayman Islands",
+  "CF": "Central African Republic",
+  "TD": "Chad",
+  "CL": "Chile",
+  "CN": "China",
+  "CX": "Christmas Island",
+  "CC": "Cocos (Keeling) Islands",
+  "CO": "Colombia",
+  "KM": "Comoros",
+  "CG": "Congo",
+  "CD": "Congo, Democratic Republic of the",
+  "CK": "Cook Islands",
+  "CR": "Costa Rica",
+  "CI": "Côte d'Ivoire",
+  "HR": "Croatia",
+  "CU": "Cuba",
+  "CW": "Curaçao",
+  "CY": "Cyprus",
+  "CZ": "Czech Republic",
+  "DK": "Denmark",
+  "DJ": "Djibouti",
+  "DM": "Dominica",
+  "DO": "Dominican Republic",
+  "EC": "Ecuador",
+  "EG": "Egypt",
+  "SV": "El Salvador",
+  "GQ": "Equatorial Guinea",
+  "ER": "Eritrea",
+  "EE": "Estonia",
+  "ET": "Ethiopia",
+  "FK": "Falkland Islands (Malvinas)",
+  "FO": "Faroe Islands",
+  "FJ": "Fiji",
+  "FI": "Finland",
+  "FR": "France",
+  "GF": "French Guiana",
+  "PF": "French Polynesia",
+  "TF": "French Southern Territories",
+  "GA": "Gabon",
+  "GM": "Gambia",
+  "GE": "Georgia",
+  "DE": "Germany",
+  "GH": "Ghana",
+  "GI": "Gibraltar",
+  "GR": "Greece",
+  "GL": "Greenland",
+  "GD": "Grenada",
+  "GP": "Guadeloupe",
+  "GU": "Guam",
+  "GT": "Guatemala",
+  "GG": "Guernsey",
+  "GN": "Guinea",
+  "GW": "Guinea-Bissau",
+  "GY": "Guyana",
+  "HT": "Haiti",
+  "HM": "Heard Island and McDonald Islands",
+  "VA": "Holy See (Vatican City State)",
+  "HN": "Honduras",
+  "HK": "Hong Kong",
+  "HU": "Hungary",
+  "IS": "Iceland",
+  "IN": "India",
+  "ID": "Indonesia",
+  "IR": "Iran",
+  "IQ": "Iraq",
+  "IE": "Ireland",
+  "IM": "Isle of Man",
+  "IL": "Israel",
+  "IT": "Italy",
+  "JM": "Jamaica",
+  "JP": "Japan",
+  "JE": "Jersey",
+  "JO": "Jordan",
+  "KZ": "Kazakhstan",
+  "KE": "Kenya",
+  "KI": "Kiribati",
+  "KP": "Korea, Democratic People's Republic of",
+  "KR": "Korea, Republic of",
+  "KW": "Kuwait",
+  "KG": "Kyrgyzstan",
+  "LA": "Lao People's Democratic Republic",
+  "LV": "Latvia",
+  "LB": "Lebanon",
+  "LS": "Lesotho",
+  "LR": "Liberia",
+  "LY": "Libya",
+  "LI": "Liechtenstein",
+  "LT": "Lithuania",
+  "LU": "Luxembourg",
+  "MO": "Macao",
+  "MK": "North Macedonia",
+  "MG": "Madagascar",
+  "MW": "Malawi",
+  "MY": "Malaysia",
+  "MV": "Maldives",
+  "ML": "Mali",
+  "MT": "Malta",
+  "MH": "Marshall Islands",
+  "MQ": "Martinique",
+  "MR": "Mauritania",
+  "MU": "Mauritius",
+  "YT": "Mayotte",
+  "MX": "Mexico",
+  "FM": "Micronesia",
+  "MD": "Moldova",
+  "MC": "Monaco",
+  "MN": "Mongolia",
+  "ME": "Montenegro",
+  "MS": "Montserrat",
+  "MA": "Morocco",
+  "MZ": "Mozambique",
+  "MM": "Myanmar",
+  "NA": "Namibia",
+  "NR": "Nauru",
+  "NP": "Nepal",
+  "NL": "Netherlands",
+  "NC": "New Caledonia",
+  "NZ": "New Zealand",
+  "NI": "Nicaragua",
+  "NE": "Niger",
+  "NG": "Nigeria",
+  "NU": "Niue",
+  "NF": "Norfolk Island",
+  "MP": "Northern Mariana Islands",
+  "NO": "Norway",
+  "OM": "Oman",
+  "PK": "Pakistan",
+  "PW": "Palau",
+  "PS": "Palestine, State of",
+  "PA": "Panama",
+  "PG": "Papua New Guinea",
+  "PY": "Paraguay",
+  "PE": "Peru",
+  "PH": "Philippines",
+  "PN": "Pitcairn",
+  "PL": "Poland",
+  "PT": "Portugal",
+  "PR": "Puerto Rico",
+  "QA": "Qatar",
+  "RE": "Réunion",
+  "RO": "Romania",
+  "RU": "Russia",
+  "RW": "Rwanda",
+  "BL": "Saint Barthélemy",
+  "SH": "Saint Helena",
+  "KN": "Saint Kitts and Nevis",
+  "LC": "Saint Lucia",
+  "MF": "Saint Martin (French part)",
+  "PM": "Saint Pierre and Miquelon",
+  "VC": "Saint Vincent and the Grenadines",
+  "WS": "Samoa",
+  "SM": "San Marino",
+  "ST": "Sao Tome and Principe",
+  "SA": "Saudi Arabia",
+  "SN": "Senegal",
+  "RS": "Serbia",
+  "SC": "Seychelles",
+  "SL": "Sierra Leone",
+  "SG": "Singapore",
+  "SX": "Sint Maarten (Dutch part)",
+  "SK": "Slovakia",
+  "SI": "Slovenia",
+  "SB": "Solomon Islands",
+  "SO": "Somalia",
+  "ZA": "South Africa",
+  "GS": "South Georgia and the South Sandwich Islands",
+  "SS": "South Sudan",
+  "ES": "Spain",
+  "LK": "Sri Lanka",
+  "SD": "Sudan",
+  "SR": "Suriname",
+  "SJ": "Svalbard and Jan Mayen",
+  "SE": "Sweden",
+  "CH": "Switzerland",
+  "SY": "Syrian Arab Republic",
+  "TW": "Taiwan",
+  "TJ": "Tajikistan",
+  "TZ": "Tanzania",
+  "TH": "Thailand",
+  "TL": "Timor-Leste",
+  "TG": "Togo",
+  "TK": "Tokelau",
+  "TO": "Tonga",
+  "TT": "Trinidad and Tobago",
+  "TN": "Tunisia",
+  "TR": "Turkey",
+  "TM": "Turkmenistan",
+  "TC": "Turks and Caicos Islands",
+  "TV": "Tuvalu",
+  "UG": "Uganda",
+  "UA": "Ukraine",
+  "AE": "United Arab Emirates",
+  "GB": "United Kingdom",
+  "US": "United States",
+  "UM": "United States Minor Outlying Islands",
+  "UY": "Uruguay",
+  "UZ": "Uzbekistan",
+  "VU": "Vanuatu",
+  "VE": "Venezuela",
+  "VN": "Vietnam",
+  "VG": "British Virgin Islands",
+  "VI": "US Virgin Islands",
+  "WF": "Wallis and Futuna",
+  "EH": "Western Sahara",
+  "YE": "Yemen",
+  "ZM": "Zambia",
+  "ZW": "Zimbabwe"
+};
+        return countries[code] || code;
+      }
+    </script>
+  </body>
 </html>
