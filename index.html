@@ -1,102 +1,368 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Your IP</title>
+<title>IP & VPN Detection</title>
 <style>
   body {
     margin: 0;
-    background-color: #080f13;
+    background: transparent;
     color: white;
     font-size: 16px;
     text-align: center;
     font-family: sans-serif;
+    padding: 1em;
   }
   #vpn-warning {
+    display: none;
     color: red;
     font-weight: bold;
     margin-bottom: 1em;
-    display: none;
-  }
-  #info div {
-    margin: 0.3em 0;
   }
 </style>
 </head>
 <body>
   <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
-  <div id="info">Loading IP...</div>
+  <div id="ipv4"></div>
+  <div id="ipv6"></div>
+  <div id="isp"></div>
+  <div id="location"></div>
 
 <script>
-  const ipinfoToken = '5b5227270a94be'; // optional, leave empty '' if none
-  const proxycheckApiKey = 'public-14f5m4-21056r-g8od20'; // required for proxycheck.io
+  const vpnKeywords = [
+    "vpn", "proxy", "proxying", "tor", "hosted", "hosting", "digitalocean",
+    "amazon aws", "amazon ec2", "linode", "cloudflare", "microsoft azure",
+    "google cloud", "ovh", "hetzner", "vultr", "packet net", "fastly",
+    "akamai", "proxy server", "private internet access", "pia", "expressvpn",
+    "nordvpn", "surfshark", "ipvanish", "windscribe", "hide.me", "purevpn",
+    "cyberghost", "ipredator", "strongvpn", "secure", "strong", "bitdefender", "proton"
+  ];
 
-  async function getIpInfo() {
-    const url = 'https://ipinfo.io/json' + (ipinfoToken ? '?token=' + ipinfoToken : '');
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch IP info');
-    return response.json();
+  const countryCodes = {
+  "AF": "Afghanistan",
+  "AX": "Åland Islands",
+  "AL": "Albania",
+  "DZ": "Algeria",
+  "AS": "American Samoa",
+  "AD": "Andorra",
+  "AO": "Angola",
+  "AI": "Anguilla",
+  "AQ": "Antarctica",
+  "AG": "Antigua and Barbuda",
+  "AR": "Argentina",
+  "AM": "Armenia",
+  "AW": "Aruba",
+  "AU": "Australia",
+  "AT": "Austria",
+  "AZ": "Azerbaijan",
+  "BS": "Bahamas",
+  "BH": "Bahrain",
+  "BD": "Bangladesh",
+  "BB": "Barbados",
+  "BY": "Belarus",
+  "BE": "Belgium",
+  "BZ": "Belize",
+  "BJ": "Benin",
+  "BM": "Bermuda",
+  "BT": "Bhutan",
+  "BO": "Bolivia",
+  "BQ": "Bonaire, Sint Eustatius and Saba",
+  "BA": "Bosnia and Herzegovina",
+  "BW": "Botswana",
+  "BV": "Bouvet Island",
+  "BR": "Brazil",
+  "IO": "British Indian Ocean Territory",
+  "BN": "Brunei Darussalam",
+  "BG": "Bulgaria",
+  "BF": "Burkina Faso",
+  "BI": "Burundi",
+  "KH": "Cambodia",
+  "CM": "Cameroon",
+  "CA": "Canada",
+  "CV": "Cape Verde",
+  "KY": "Cayman Islands",
+  "CF": "Central African Republic",
+  "TD": "Chad",
+  "CL": "Chile",
+  "CN": "China",
+  "CX": "Christmas Island",
+  "CC": "Cocos (Keeling) Islands",
+  "CO": "Colombia",
+  "KM": "Comoros",
+  "CG": "Congo",
+  "CD": "Congo, Democratic Republic of the",
+  "CK": "Cook Islands",
+  "CR": "Costa Rica",
+  "CI": "Côte d'Ivoire",
+  "HR": "Croatia",
+  "CU": "Cuba",
+  "CW": "Curaçao",
+  "CY": "Cyprus",
+  "CZ": "Czech Republic",
+  "DK": "Denmark",
+  "DJ": "Djibouti",
+  "DM": "Dominica",
+  "DO": "Dominican Republic",
+  "EC": "Ecuador",
+  "EG": "Egypt",
+  "SV": "El Salvador",
+  "GQ": "Equatorial Guinea",
+  "ER": "Eritrea",
+  "EE": "Estonia",
+  "ET": "Ethiopia",
+  "FK": "Falkland Islands (Malvinas)",
+  "FO": "Faroe Islands",
+  "FJ": "Fiji",
+  "FI": "Finland",
+  "FR": "France",
+  "GF": "French Guiana",
+  "PF": "French Polynesia",
+  "TF": "French Southern Territories",
+  "GA": "Gabon",
+  "GM": "Gambia",
+  "GE": "Georgia",
+  "DE": "Germany",
+  "GH": "Ghana",
+  "GI": "Gibraltar",
+  "GR": "Greece",
+  "GL": "Greenland",
+  "GD": "Grenada",
+  "GP": "Guadeloupe",
+  "GU": "Guam",
+  "GT": "Guatemala",
+  "GG": "Guernsey",
+  "GN": "Guinea",
+  "GW": "Guinea-Bissau",
+  "GY": "Guyana",
+  "HT": "Haiti",
+  "HM": "Heard Island and McDonald Islands",
+  "VA": "Holy See (Vatican City State)",
+  "HN": "Honduras",
+  "HK": "Hong Kong",
+  "HU": "Hungary",
+  "IS": "Iceland",
+  "IN": "India",
+  "ID": "Indonesia",
+  "IR": "Iran",
+  "IQ": "Iraq",
+  "IE": "Ireland",
+  "IM": "Isle of Man",
+  "IL": "Israel",
+  "IT": "Italy",
+  "JM": "Jamaica",
+  "JP": "Japan",
+  "JE": "Jersey",
+  "JO": "Jordan",
+  "KZ": "Kazakhstan",
+  "KE": "Kenya",
+  "KI": "Kiribati",
+  "KP": "Korea, Democratic People's Republic of",
+  "KR": "Korea, Republic of",
+  "KW": "Kuwait",
+  "KG": "Kyrgyzstan",
+  "LA": "Lao People's Democratic Republic",
+  "LV": "Latvia",
+  "LB": "Lebanon",
+  "LS": "Lesotho",
+  "LR": "Liberia",
+  "LY": "Libya",
+  "LI": "Liechtenstein",
+  "LT": "Lithuania",
+  "LU": "Luxembourg",
+  "MO": "Macao",
+  "MK": "North Macedonia",
+  "MG": "Madagascar",
+  "MW": "Malawi",
+  "MY": "Malaysia",
+  "MV": "Maldives",
+  "ML": "Mali",
+  "MT": "Malta",
+  "MH": "Marshall Islands",
+  "MQ": "Martinique",
+  "MR": "Mauritania",
+  "MU": "Mauritius",
+  "YT": "Mayotte",
+  "MX": "Mexico",
+  "FM": "Micronesia",
+  "MD": "Moldova",
+  "MC": "Monaco",
+  "MN": "Mongolia",
+  "ME": "Montenegro",
+  "MS": "Montserrat",
+  "MA": "Morocco",
+  "MZ": "Mozambique",
+  "MM": "Myanmar",
+  "NA": "Namibia",
+  "NR": "Nauru",
+  "NP": "Nepal",
+  "NL": "Netherlands",
+  "NC": "New Caledonia",
+  "NZ": "New Zealand",
+  "NI": "Nicaragua",
+  "NE": "Niger",
+  "NG": "Nigeria",
+  "NU": "Niue",
+  "NF": "Norfolk Island",
+  "MP": "Northern Mariana Islands",
+  "NO": "Norway",
+  "OM": "Oman",
+  "PK": "Pakistan",
+  "PW": "Palau",
+  "PS": "Palestine, State of",
+  "PA": "Panama",
+  "PG": "Papua New Guinea",
+  "PY": "Paraguay",
+  "PE": "Peru",
+  "PH": "Philippines",
+  "PN": "Pitcairn",
+  "PL": "Poland",
+  "PT": "Portugal",
+  "PR": "Puerto Rico",
+  "QA": "Qatar",
+  "RE": "Réunion",
+  "RO": "Romania",
+  "RU": "Russia",
+  "RW": "Rwanda",
+  "BL": "Saint Barthélemy",
+  "SH": "Saint Helena",
+  "KN": "Saint Kitts and Nevis",
+  "LC": "Saint Lucia",
+  "MF": "Saint Martin (French part)",
+  "PM": "Saint Pierre and Miquelon",
+  "VC": "Saint Vincent and the Grenadines",
+  "WS": "Samoa",
+  "SM": "San Marino",
+  "ST": "Sao Tome and Principe",
+  "SA": "Saudi Arabia",
+  "SN": "Senegal",
+  "RS": "Serbia",
+  "SC": "Seychelles",
+  "SL": "Sierra Leone",
+  "SG": "Singapore",
+  "SX": "Sint Maarten (Dutch part)",
+  "SK": "Slovakia",
+  "SI": "Slovenia",
+  "SB": "Solomon Islands",
+  "SO": "Somalia",
+  "ZA": "South Africa",
+  "GS": "South Georgia and the South Sandwich Islands",
+  "SS": "South Sudan",
+  "ES": "Spain",
+  "LK": "Sri Lanka",
+  "SD": "Sudan",
+  "SR": "Suriname",
+  "SJ": "Svalbard and Jan Mayen",
+  "SE": "Sweden",
+  "CH": "Switzerland",
+  "SY": "Syrian Arab Republic",
+  "TW": "Taiwan",
+  "TJ": "Tajikistan",
+  "TZ": "Tanzania",
+  "TH": "Thailand",
+  "TL": "Timor-Leste",
+  "TG": "Togo",
+  "TK": "Tokelau",
+  "TO": "Tonga",
+  "TT": "Trinidad and Tobago",
+  "TN": "Tunisia",
+  "TR": "Turkey",
+  "TM": "Turkmenistan",
+  "TC": "Turks and Caicos Islands",
+  "TV": "Tuvalu",
+  "UG": "Uganda",
+  "UA": "Ukraine",
+  "AE": "United Arab Emirates",
+  "GB": "United Kingdom",
+  "US": "United States",
+  "UM": "United States Minor Outlying Islands",
+  "UY": "Uruguay",
+  "UZ": "Uzbekistan",
+  "VU": "Vanuatu",
+  "VE": "Venezuela",
+  "VN": "Vietnam",
+  "VG": "British Virgin Islands",
+  "VI": "US Virgin Islands",
+  "WF": "Wallis and Futuna",
+  "EH": "Western Sahara",
+  "YE": "Yemen",
+  "ZM": "Zambia",
+  "ZW": "Zimbabwe"
+};
+
+  function getCountryName(code) {
+    if (!code) return "";
+    return countryCodes[code.toUpperCase()] || code;
   }
 
-  async function checkVpn(ip) {
-    const url = `https://proxycheck.io/v2/${ip}?key=${proxycheckApiKey}&vpn=1&asn=1&node=1`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch VPN info');
-    return response.json();
+  function checkVPN(orgName) {
+    if (!orgName) return false;
+    const orgLower = orgName.toLowerCase();
+    return vpnKeywords.some(keyword => orgLower.includes(keyword));
   }
 
-  function displayInfo(data, vpnDetected) {
-    const infoEl = document.getElementById('info');
-    let html = '';
+  function displayData(data) {
+    const ipv4 = data.ip || "";
+    const ipv6 = data.ipv6 || "";
+    const org = data.org || "";
+    const city = data.city || "";
+    const region = data.region || "";
+    const countryCode = data.country || "";
+    const countryFull = getCountryName(countryCode);
 
-    // ipinfo only returns one IP string, might be IPv4 or IPv6
-    const ip = data.ip || '';
-    const isIPv6 = ip.includes(':');
-    const isIPv4 = !isIPv6;
-
-    if (isIPv4) {
-      html += `<div>IPv4: ${ip}</div>`;
-    } else if (isIPv6) {
-      html += `<div>IPv6: ${ip}</div>`;
+    // Show/hide IPv4 line
+    if(ipv4) {
+      document.getElementById("ipv4").textContent = `IPv4: ${ipv4}`;
     }
 
-    html += `<div>ISP: ${data.org || 'Unknown'}</div>`;
-    html += `<div>City: ${data.city || 'Unknown'}, ${data.region || 'Unknown'}, ${data.country || 'Unknown'}</div>`;
+    // Show/hide IPv6 line
+    if(ipv6) {
+      document.getElementById("ipv6").textContent = `IPv6: ${ipv6}`;
+    }
 
-    infoEl.innerHTML = html;
+    // ISP/Org always show if present
+    if(org) {
+      document.getElementById("isp").textContent = `ISP: ${org}`;
+    }
 
-    const vpnWarningEl = document.getElementById('vpn-warning');
-    if (vpnDetected) {
-      vpnWarningEl.style.display = 'block';
+    // Location line
+    let locationText = "";
+    if(city) locationText += city;
+    if(region) {
+      if(locationText) locationText += ", ";
+      locationText += region;
+    }
+    if(countryFull) {
+      if(locationText) locationText += ", ";
+      locationText += countryFull;
+    }
+    if(locationText) {
+      document.getElementById("location").textContent = `City: ${locationText}`;
+    }
+
+    // VPN detection
+    if(checkVPN(org)) {
+      document.getElementById("vpn-warning").style.display = "block";
     } else {
-      vpnWarningEl.style.display = 'none';
+      document.getElementById("vpn-warning").style.display = "none";
     }
   }
 
-  async function main() {
-    try {
-      const ipInfo = await getIpInfo();
-      const ip = ipInfo.ip;
-
-      let vpnDetected = false;
-      if (ip) {
-        const vpnInfo = await checkVpn(ip);
-        // proxycheck.io returns structure: { "ip": { "proxy": "yes"/"no", "vpn": "yes"/"no", "tor": "yes"/"no", ... } }
-        if (vpnInfo[ip] && (vpnInfo[ip].vpn === "yes" || vpnInfo[ip].proxy === "yes" || vpnInfo[ip].tor === "yes")) {
-          vpnDetected = true;
-        }
-      }
-
-      displayInfo(ipInfo, vpnDetected);
-    } catch (e) {
-      console.error(e);
-      document.getElementById('info').innerHTML = '<div style="color:red;">Failed to load IP information</div>';
-      document.getElementById('vpn-warning').style.display = 'none';
-    }
+  function fetchIPInfo() {
+    fetch('https://ipinfo.io/json?token=5b5227270a94be')
+      .then(response => {
+        if(!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        displayData(data);
+      })
+      .catch(err => {
+        document.body.innerHTML = 'Failed to retrieve IP info';
+        console.error(err);
+      });
   }
 
-  main();
+  fetchIPInfo();
 </script>
-
 </body>
 </html>
