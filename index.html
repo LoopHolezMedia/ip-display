@@ -33,7 +33,7 @@
       const vpnWarning = document.getElementById("vpn-warning");
 
       // Get IP and location info from IPInfo Lite
-      fetch("https://api.ipinfo.io/lite?token=5b5227270a94be")
+      fetch("https://api.ipinfo.io/lite/me?token=5b5227270a94be")
         .then(res => res.json())
         .then(data => {
           const ip = data.ip || null;
