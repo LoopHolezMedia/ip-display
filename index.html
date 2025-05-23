@@ -1,82 +1,90 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8" />
-  <title>User Info</title>
-  <style>
-    body {
-      margin: 0;
-      background-color: #080f13;
-      color: white;
-      font-size: 16px;
-      text-align: center;
-      font-family: sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-      gap: 8px;
-      padding: 0 10px;
-    }
-  </style>
-</head>
-<body>
-  <div id="ipv4" style="display:none;">IPv4: Loading...</div>
-  <div id="ipv6" style="display:none;">IPv6: Loading...</div>
-  <div id="isp" style="display:none;">ISP: Loading...</div>
-  <div id="city" style="display:none;">City: Loading...</div>
-  <div id="error" style="display:none; color: red; font-weight: bold;"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Your IP</title>
+    <style>
+      body {
+        margin: 0;
+        background-color: #080f13;
+        color: white;
+        font-size: 16px;
+        text-align: center;
+        font-family: sans-serif;
+      }
+      #vpn-warning {
+        color: red;
+        font-weight: bold;
+        margin-bottom: 1em;
+        display: none;
+      }
+      #info div {
+        margin: 0.3em 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
+    <div id="info">Loading IP...</div>
 
-  <script>
-    fetch('https://ipinfo.io/json?token=5b5227270a94be')
-      .then(response => response.json())
-      .then(data => {
-        const hasIPv4 = data.ip && data.ip.trim() !== '';
-        const isIPv6 = hasIPv4 && data.ip.includes(':');
-        const isIPv4 = hasIPv4 && !isIPv6;
+    <script>
+      const ipinfoToken = '5b5227270a94be'; // add your ipinfo token here or leave empty
 
-        if (!hasIPv4) {
-          document.getElementById('error').style.display = 'block';
-          document.getElementById('error').innerText = 'You do not have an available IP address';
-          return;
+      async function fetchIPInfo() {
+        try {
+          // Fetch IP info from ipinfo.io
+          const ipinfoUrl = 'https://ipinfo.io/json' + (ipinfoToken ? '?token=' + ipinfoToken : '');
+          const response = await fetch(ipinfoUrl);
+          if (!response.ok) throw new Error('Failed to fetch IP info');
+          const data = await response.json();
+
+          // Fetch VPN info from ipapi.co
+          let vpnData = null;
+          try {
+            const vpnResp = await fetch('https://ipapi.co/json');
+            if (vpnResp.ok) vpnData = await vpnResp.json();
+          } catch (e) {
+            // ignore vpn fetch errors silently
+          }
+
+          // Show or hide VPN warning
+          const vpnWarningEl = document.getElementById('vpn-warning');
+          if (vpnData && vpnData.security && vpnData.security.vpn) {
+            vpnWarningEl.style.display = 'block';
+          } else {
+            vpnWarningEl.style.display = 'none';
+          }
+
+          const infoEl = document.getElementById('info');
+
+          // ipinfo returns the main IP (IPv4 or IPv6) in data.ip
+          // ipinfo might not explicitly separate IPv4 and IPv6,
+          // so we'll show the IP as either IPv4 or IPv6 line accordingly
+          const ip = data.ip || '';
+          const isIPv6 = ip.includes(':');
+          const isIPv4 = !isIPv6;
+
+          let html = '';
+
+          if (isIPv4) {
+            html += `<div>IPv4: ${ip}</div>`;
+          } else if (isIPv6) {
+            html += `<div>IPv6: ${ip}</div>`;
+          }
+
+          // Show ISP (org), City, Region, Country (full name)
+          html += `<div>ISP: ${data.org || 'Unknown'}</div>`;
+          html += `<div>City: ${data.city || 'Unknown'}, ${data.region || 'Unknown'}, ${data.country || 'Unknown'}</div>`;
+
+          infoEl.innerHTML = html;
+        } catch (error) {
+          console.error(error);
+          document.getElementById('info').innerHTML = '<div style="color:red;">Failed to load IP information</div>';
+          document.getElementById('vpn-warning').style.display = 'none';
         }
+      }
 
-        if (isIPv4) {
-          const ipv4Div = document.getElementById('ipv4');
-          ipv4Div.style.display = 'block';
-          ipv4Div.innerText = 'IPv4: ' + data.ip;
-        } else {
-          // IPv6 only
-          const ipv6Div = document.getElementById('ipv6');
-          ipv6Div.style.display = 'block';
-          ipv6Div.innerText = 'IPv6: ' + data.ip;
-        }
-
-        if (data.org && data.org.trim() !== '') {
-          const ispDiv = document.getElementById('isp');
-          ispDiv.style.display = 'block';
-          ispDiv.innerText = 'ISP: ' + data.org;
-        }
-
-        const city = data.city || '';
-        const region = data.region || '';
-        const country = data.country || '';
-        if(city || region || country) {
-          const cityDiv = document.getElementById('city');
-          cityDiv.style.display = 'block';
-          let cityLine = 'City: ';
-          if(city) cityLine += city;
-          if(region) cityLine += ', ' + region;
-          if(country) cityLine += ', ' + country;
-          cityDiv.innerText = cityLine;
-        }
-      })
-      .catch(err => {
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').innerText = 'Error loading info';
-        console.error(err);
-      });
-  </script>
-</body>
+      fetchIPInfo();
+    </script>
+  </body>
 </html>
