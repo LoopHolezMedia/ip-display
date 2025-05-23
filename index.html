@@ -1,90 +1,102 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Your IP</title>
-    <style>
-      body {
-        margin: 0;
-        background-color: #080f13;
-        color: white;
-        font-size: 16px;
-        text-align: center;
-        font-family: sans-serif;
-      }
-      #vpn-warning {
-        color: red;
-        font-weight: bold;
-        margin-bottom: 1em;
-        display: none;
-      }
-      #info div {
-        margin: 0.3em 0;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
-    <div id="info">Loading IP...</div>
+<head>
+<meta charset="UTF-8" />
+<title>Your IP</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #080f13;
+    color: white;
+    font-size: 16px;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  #vpn-warning {
+    color: red;
+    font-weight: bold;
+    margin-bottom: 1em;
+    display: none;
+  }
+  #info div {
+    margin: 0.3em 0;
+  }
+</style>
+</head>
+<body>
+  <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
+  <div id="info">Loading IP...</div>
 
-    <script>
-      const ipinfoToken = '5b5227270a94be'; // add your ipinfo token here or leave empty
+<script>
+  const ipinfoToken = '5b5227270a94be'; // optional, leave empty '' if none
+  const proxycheckApiKey = 'public-14f5m4-21056r-g8od20'; // required for proxycheck.io
 
-      async function fetchIPInfo() {
-        try {
-          // Fetch IP info from ipinfo.io
-          const ipinfoUrl = 'https://ipinfo.io/json' + (ipinfoToken ? '?token=' + ipinfoToken : '');
-          const response = await fetch(ipinfoUrl);
-          if (!response.ok) throw new Error('Failed to fetch IP info');
-          const data = await response.json();
+  async function getIpInfo() {
+    const url = 'https://ipinfo.io/json' + (ipinfoToken ? '?token=' + ipinfoToken : '');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch IP info');
+    return response.json();
+  }
 
-          // Fetch VPN info from ipapi.co
-          let vpnData = null;
-          try {
-            const vpnResp = await fetch('https://ipapi.co/json');
-            if (vpnResp.ok) vpnData = await vpnResp.json();
-          } catch (e) {
-            // ignore vpn fetch errors silently
-          }
+  async function checkVpn(ip) {
+    const url = `https://proxycheck.io/v2/${ip}?key=${proxycheckApiKey}&vpn=1&asn=1&node=1`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch VPN info');
+    return response.json();
+  }
 
-          // Show or hide VPN warning
-          const vpnWarningEl = document.getElementById('vpn-warning');
-          if (vpnData && vpnData.security && vpnData.security.vpn) {
-            vpnWarningEl.style.display = 'block';
-          } else {
-            vpnWarningEl.style.display = 'none';
-          }
+  function displayInfo(data, vpnDetected) {
+    const infoEl = document.getElementById('info');
+    let html = '';
 
-          const infoEl = document.getElementById('info');
+    // ipinfo only returns one IP string, might be IPv4 or IPv6
+    const ip = data.ip || '';
+    const isIPv6 = ip.includes(':');
+    const isIPv4 = !isIPv6;
 
-          // ipinfo returns the main IP (IPv4 or IPv6) in data.ip
-          // ipinfo might not explicitly separate IPv4 and IPv6,
-          // so we'll show the IP as either IPv4 or IPv6 line accordingly
-          const ip = data.ip || '';
-          const isIPv6 = ip.includes(':');
-          const isIPv4 = !isIPv6;
+    if (isIPv4) {
+      html += `<div>IPv4: ${ip}</div>`;
+    } else if (isIPv6) {
+      html += `<div>IPv6: ${ip}</div>`;
+    }
 
-          let html = '';
+    html += `<div>ISP: ${data.org || 'Unknown'}</div>`;
+    html += `<div>City: ${data.city || 'Unknown'}, ${data.region || 'Unknown'}, ${data.country || 'Unknown'}</div>`;
 
-          if (isIPv4) {
-            html += `<div>IPv4: ${ip}</div>`;
-          } else if (isIPv6) {
-            html += `<div>IPv6: ${ip}</div>`;
-          }
+    infoEl.innerHTML = html;
 
-          // Show ISP (org), City, Region, Country (full name)
-          html += `<div>ISP: ${data.org || 'Unknown'}</div>`;
-          html += `<div>City: ${data.city || 'Unknown'}, ${data.region || 'Unknown'}, ${data.country || 'Unknown'}</div>`;
+    const vpnWarningEl = document.getElementById('vpn-warning');
+    if (vpnDetected) {
+      vpnWarningEl.style.display = 'block';
+    } else {
+      vpnWarningEl.style.display = 'none';
+    }
+  }
 
-          infoEl.innerHTML = html;
-        } catch (error) {
-          console.error(error);
-          document.getElementById('info').innerHTML = '<div style="color:red;">Failed to load IP information</div>';
-          document.getElementById('vpn-warning').style.display = 'none';
+  async function main() {
+    try {
+      const ipInfo = await getIpInfo();
+      const ip = ipInfo.ip;
+
+      let vpnDetected = false;
+      if (ip) {
+        const vpnInfo = await checkVpn(ip);
+        // proxycheck.io returns structure: { "ip": { "proxy": "yes"/"no", "vpn": "yes"/"no", "tor": "yes"/"no", ... } }
+        if (vpnInfo[ip] && (vpnInfo[ip].vpn === "yes" || vpnInfo[ip].proxy === "yes" || vpnInfo[ip].tor === "yes")) {
+          vpnDetected = true;
         }
       }
 
-      fetchIPInfo();
-    </script>
-  </body>
+      displayInfo(ipInfo, vpnDetected);
+    } catch (e) {
+      console.error(e);
+      document.getElementById('info').innerHTML = '<div style="color:red;">Failed to load IP information</div>';
+      document.getElementById('vpn-warning').style.display = 'none';
+    }
+  }
+
+  main();
+</script>
+
+</body>
 </html>
