@@ -1,57 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>IP & VPN Detection</title>
-<style>
-  body {
-    margin: 0;
-    background: transparent;
-    color: white;
-    font-size: 16px;
-    text-align: center;
-    font-family: sans-serif;
-    padding: 1em;
-  }
-  #vpn-warning {
-    display: none;
-    color: red;
-    font-weight: bold;
-    margin-bottom: 1em;
-  }
-  #mobile-notice {
-    display: none;
-    color: orange;
-    font-weight: bold;
-    margin-bottom: 1em;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your IP Address</title>
+  <style>
+    body {
+      margin: 0;
+      background: #080f13;
+      color: white;
+      font-family: sans-serif;
+      font-size: 16px;
+      text-align: center;
+      padding: 20px;
+    }
+    #vpn-warning {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: none;
+    }
+    #ipinfo {
+      white-space: pre-wrap;
+    }
+  </style>
 </head>
 <body>
-  <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
-  <div id="mobile-notice">You appear to be on a mobile or cellular network. Some information may be less accurate.</div>
-  <div id="ipv4"></div>
-  <div id="ipv6"></div>
-  <div id="isp"></div>
-  <div id="location"></div>
+
+<div id="vpn-warning"></div>
+<div id="ipinfo">Loading...</div>
 
 <script>
-  const vpnKeywords = [
-    "vpn", "proxy", "proxying", "tor", "hosted", "hosting", "digitalocean",
-    "amazon aws", "amazon ec2", "linode", "cloudflare", "microsoft azure",
-    "google cloud", "ovh", "hetzner", "vultr", "packet net", "fastly",
-    "akamai", "proxy server", "private internet access", "pia", "expressvpn",
-    "nordvpn", "surfshark", "ipvanish", "windscribe", "hide.me", "purevpn",
-    "cyberghost", "ipredator", "strongvpn", "strong", "secure", "proton", "protonvpn"
-  ];
+  (function() {
+    const allowedDomains = ['loopholezmedia.com', 'lpz.app'];
 
-  const mobileKeywords = [
-    "verizon", "att", "t-mobile", "vodafone", "telstra", "sprint", 
-    "telecom", "cellular", "mobile", "hotspot", "docomo", "vodafone"
-  ];
+    function showError(message) {
+      document.getElementById('vpn-warning').style.display = 'none';
+      document.getElementById('ipinfo').textContent = '';
+      document.body.insertAdjacentHTML('afterbegin', `<p style="color:red; text-align:center;">${message}</p>`);
+    }
 
-  // Your full country code to name mapping (from your GitHub file)
-  const countryCodes = {
+    // Embedding domain check
+    if (window.top !== window.self) {
+      // Page is embedded in iframe
+      try {
+        const referrer = document.referrer;
+        if (!referrer) {
+          showError('Embedding not allowed: No referrer detected.');
+          return;
+        }
+        const referrerHost = new URL(referrer).hostname.toLowerCase();
+        const allowed = allowedDomains.some(domain =>
+          referrerHost === domain || referrerHost.endsWith('.' + domain)
+        );
+        if (!allowed) {
+          showError('Embedding not allowed on this domain.');
+          return;
+        }
+      } catch (e) {
+        showError('Embedding not allowed due to error.');
+        return;
+      }
+    }
+
+    // If allowed or not embedded, continue with existing IP info fetch & display code:
+
+    const countryCodes = {
     "AF": "Afghanistan",
     "AL": "Albania",
     "DZ": "Algeria",
@@ -290,88 +305,62 @@
     "YE": "Yemen",
     "ZM": "Zambia",
     "ZW": "Zimbabwe"
-  };
+    };
 
-  function checkKeywords(orgName, keywords) {
-    if (!orgName) return false;
-    const lowerOrg = orgName.toLowerCase();
-    return keywords.some(keyword => lowerOrg.includes(keyword));
-  }
-
-  async function fetchIPInfo() {
-    try {
-      const res = await fetch('https://ipinfo.io/json?token=5b5227270a94be');
-      if (!res.ok) throw new Error("Network response was not ok");
-      const data = await res.json();
-
-      const ipv4 = data.ip || null;
-      // ipinfo v4 API does not separate IPv6, but data.ip may be IPv4 or IPv6 depending on client
-      // To keep old behavior, hide ipv6 line (no IPv6 data)
-      const ipv6 = null; 
-      
-      const org = data.org || "";
-      const city = data.city || "";
-      const region = data.region || "";
-      const countryCode = data.country || "";
-      const countryFull = countryCodes[countryCode] || countryCode;
-
-      // Display IPs if present
-      const ipv4Elem = document.getElementById("ipv4");
-      const ipv6Elem = document.getElementById("ipv6");
-      const ispElem = document.getElementById("isp");
-      const locationElem = document.getElementById("location");
-
-      // IPv4
-      if (ipv4) {
-        ipv4Elem.textContent = `IPv4: "${ipv4}"`;
-        ipv4Elem.style.display = "block";
-      } else {
-        ipv4Elem.style.display = "none";
-      }
-
-      // IPv6
-      if (ipv6) {
-        ipv6Elem.textContent = `IPv6: "${ipv6}"`;
-        ipv6Elem.style.display = "block";
-      } else {
-        ipv6Elem.style.display = "none";
-      }
-
-      ispElem.textContent = `ISP: "${org}"`;
-
-      // Location line: City, Region Code, Full Country Name
-      if (city || region || countryFull) {
-        locationElem.textContent = `City: "${city}", "${region}", "${countryFull}"`;
-      } else {
-        locationElem.textContent = "";
-      }
-
-      // Check VPN and Mobile
-      const isVPN = checkKeywords(org, vpnKeywords);
-      const isMobile = checkKeywords(org, mobileKeywords);
-
-      const vpnWarning = document.getElementById("vpn-warning");
-      const mobileNotice = document.getElementById("mobile-notice");
-
-      if (isVPN) {
-        vpnWarning.style.display = "block";
-      } else {
-        vpnWarning.style.display = "none";
-      }
-
-      if (isMobile) {
-        mobileNotice.style.display = "block";
-      } else {
-        mobileNotice.style.display = "none";
-      }
-
-    } catch (error) {
-      document.body.innerHTML = "Failed to retrieve IP info";
-      console.error(error);
+    function isVpnOrProxy(org) {
+      if (!org) return false;
+      const keywords = [
+    "vpn", "proxy", "proxying", "tor", "hosted", "hosting", "digitalocean",
+    "amazon aws", "amazon ec2", "linode", "cloudflare", "microsoft azure",
+    "google cloud", "ovh", "hetzner", "vultr", "packet net", "fastly",
+    "akamai", "proxy server", "private internet access", "pia", "expressvpn",
+    "nordvpn", "surfshark", "ipvanish", "windscribe", "hide.me", "purevpn",
+    "cyberghost", "ipredator", "strongvpn", "strong", "secure", "proton", "protonvpn"
+      ];
+      const orgLower = org.toLowerCase();
+      return keywords.some(keyword => orgLower.includes(keyword));
     }
-  }
 
-  fetchIPInfo();
+    fetch('https://ipinfo.io/json?token=YOUR_TOKEN_HERE')
+      .then(response => response.json())
+      .then(data => {
+        let ipv4 = data.ip || '';
+        let ipv6 = data.ipv6 || '';
+        let org = data.org || '';
+        let city = data.city || '';
+        let region = data.region || '';
+        let countryCode = data.country || '';
+        let countryFull = countryCodes[countryCode] || countryCode;
+
+        // Build output string, hide lines if empty
+        let output = '';
+        if (ipv4) output += `IPv4: ${ipv4}\n`;
+        if (ipv6) output += `IPv6: ${ipv6}\n`;
+        if (org) output += `ISP: ${org}\n`;
+        if (city || region || countryFull) {
+          output += `City: ${city}, ${region}, ${countryFull}`;
+        }
+
+        if (!ipv4 && !ipv6) {
+          output = "You do not have an available IP address.";
+        }
+
+        document.getElementById('ipinfo').textContent = output;
+
+        // VPN detection warning
+        if (isVpnOrProxy(org)) {
+          const vpnWarning = document.getElementById('vpn-warning');
+          vpnWarning.textContent = 'You are using a VPN! The information displayed may be inaccurate!';
+          vpnWarning.style.display = 'block';
+        }
+      })
+      .catch(() => {
+        document.getElementById('ipinfo').textContent = 'Failed to retrieve IP info.';
+      });
+
+  })();
 </script>
+
 </body>
+</html>
 </html>
