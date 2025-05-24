@@ -52,13 +52,14 @@
       throw new Error('Unauthorized embed attempt from: ' + (referrerHost || 'unknown'));
     }
   } catch (e) {
+    console.error('Referrer check failed:', e);
     document.body.innerHTML = `
       <div style="color:red; font-family:sans-serif; font-size:18px; padding:20px; text-align:center;">
         Error: Could not verify embedding domain.
       </div>
     `;
-    console.error(e);
   }
+
     // If allowed or not embedded, continue with existing IP info fetch & display code:
 
     const countryCodes = {
