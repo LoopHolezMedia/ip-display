@@ -31,8 +31,9 @@
 <div id="vpn-warning"></div>
 <div id="ipinfo">Loading...</div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
+ <script>
+    // Run only after the document has fully loaded
+    window.addEventListener('DOMContentLoaded', function () {
       const allowedDomains = [
         'loopholezmedia.com',
         'www.loopholezmedia.com',
@@ -54,14 +55,11 @@
       const isAllowed = !isEmbedded || allowedDomains.includes(referrerHost);
 
       if (!isAllowed) {
-        const infoDiv = document.getElementById('ip-info');
-        if (infoDiv) {
-          infoDiv.innerHTML = `
-            <div class="error">
-              Error: This embed is not authorized on this domain.
-            </div>
-          `;
-        }
+        document.getElementById('ip-info').innerHTML = `
+          <div class="error">
+            Error: This embed is not authorized on this domain.
+          </div>
+        `;
         return;
       }
 
