@@ -55,7 +55,7 @@
       const isAllowed = !isEmbedded || allowedDomains.includes(referrerHost);
 
       if (!isAllowed) {
-        document.getElementById('ip-info').innerHTML = `
+        document.getElementById('ipinfo').innerHTML = `
           <div class="error">
             Error: This embed is not authorized on this domain.
           </div>
