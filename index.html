@@ -32,36 +32,35 @@
 <div id="ipinfo">Loading...</div>
 
 <script>
-  (function() {
-    const allowedDomains = [
-      'loopholezmedia.com',
-      'www.loopholezmedia.com',
-      'lpz.app',
-      'internal.github.ip.lpz.app'
-    ];
+    (function() {
+      const allowedDomains = [
+        'loopholezmedia.com',
+        'www.loopholezmedia.com',
+        'lpz.app',
+        'internal.github.ip.lpz.app'
+      ];
 
-    try {
-      const referrer = document.referrer;
-      const referrerHost = referrer ? new URL(referrer).hostname : null;
+      try {
+        const referrer = document.referrer;
+        const referrerHost = referrer ? new URL(referrer).hostname : null;
 
-      if (!referrerHost || !allowedDomains.includes(referrerHost)) {
-        document.body.innerHTML = `
-          <div style="color:red; font-family:sans-serif; font-size:18px; padding:20px; text-align:center;">
-            Error: This embed is not authorized on this domain.
+        if (!referrerHost || !allowedDomains.includes(referrerHost)) {
+          document.getElementById('ip-info').innerHTML = `
+            <div class="error">
+              Error: This embed is not authorized on this domain.
+            </div>
+          `;
+          return; // Stop script execution
+        }
+      } catch (e) {
+        console.error('Referrer check failed:', e);
+        document.getElementById('ip-info').innerHTML = `
+          <div class="error">
+            Error: Could not verify embedding domain.
           </div>
         `;
         return; // Stop script execution
       }
-    } catch (e) {
-      console.error('Referrer check failed:', e);
-      document.body.innerHTML = `
-        <div style="color:red; font-family:sans-serif; font-size:18px; padding:20px; text-align:center;">
-          Error: Could not verify embedding domain.
-        </div>
-      `;
-      return; // Stop script execution
-    }
-  })();
 
     // If allowed or not embedded, continue with existing IP info fetch & display code:
 
