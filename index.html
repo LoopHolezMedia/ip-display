@@ -28,28 +28,6 @@
 </style>
 </head>
 <body>
-  <script>
-  (function() {
-    if (window.top !== window.self) {
-      try {
-        const allowedDomains = ['loopholezmedia.com', 'lpz.app'];
-        const referrer = document.referrer;
-        if (!referrer) {
-          document.body.innerHTML = '<p style="color:red; text-align:center;">Embedding not allowed: No referrer detected.</p>';
-          return;
-        }
-        const referrerHost = new URL(referrer).hostname;
-        const allowed = allowedDomains.some(domain => referrerHost === domain || referrerHost.endsWith('.' + domain));
-        if (!allowed) {
-          document.body.innerHTML = '<p style="color:red; text-align:center;">Embedding not allowed on this domain.</p>';
-        }
-      } catch (e) {
-        document.body.innerHTML = '<p style="color:red; text-align:center;">Embedding not allowed due to error.</p>';
-      }
-    }
-  })();
-</script>
-  
   <div id="vpn-warning">You are using a VPN! The information displayed may be inaccurate!</div>
   <div id="mobile-notice">You appear to be on a mobile or cellular network. Some information may be less accurate.</div>
   <div id="ipv4"></div>
