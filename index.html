@@ -31,7 +31,7 @@
 <div id="vpn-warning"></div>
 <div id="ipinfo">Loading...</div>
 
-<script>
+  <script>
     (function() {
       const allowedDomains = [
         'loopholezmedia.com',
@@ -40,26 +40,26 @@
         'internal.github.ip.lpz.app'
       ];
 
+      const referrer = document.referrer;
+      let referrerHost = null;
       try {
-        const referrer = document.referrer;
-        const referrerHost = referrer ? new URL(referrer).hostname : null;
-
-        if (!referrerHost || !allowedDomains.includes(referrerHost)) {
-          document.getElementById('ip-info').innerHTML = `
-            <div class="error">
-              Error: This embed is not authorized on this domain.
-            </div>
-          `;
-          return; // Stop script execution
+        if (referrer) {
+          referrerHost = new URL(referrer).hostname;
         }
       } catch (e) {
-        console.error('Referrer check failed:', e);
+        console.error('Invalid referrer URL', e);
+      }
+
+      const isEmbedded = window.top !== window.self;
+      const isAllowed = !isEmbedded || allowedDomains.includes(referrerHost);
+
+      if (!isAllowed) {
         document.getElementById('ip-info').innerHTML = `
           <div class="error">
-            Error: Could not verify embedding domain.
+            Error: This embed is not authorized on this domain.
           </div>
         `;
-        return; // Stop script execution
+        return;
       }
 
     // If allowed or not embedded, continue with existing IP info fetch & display code:
